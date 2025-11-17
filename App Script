@@ -1,0 +1,185 @@
+library(shiny)
+library(shinyjs)
+library(tidyverse)
+library(shinythemes)
+
+# Mise en place -----------------------------------------------------------
+list_npc<- read.csv2("list_NPCs.csv")
+list_gender<-c("He/Him","She/Her","They/Them")
+list_ancestry <- c( "Clank",
+                    "Drakona",
+                    "Dwarf", 
+                    "Elf", 
+                    "Faerie", 
+                    "Faun", 
+                    "Firbolg",
+                    "Fungril",
+                    "Galapa", 
+                    "Giant", 
+                    "Goblin", 
+                    "Halfling", 
+                    "Human", 
+                    "Infernis", 
+                    "Katari", 
+                    "Orc",
+                    "Ribbet",
+                    "Simiah")
+list_community <- c("Highborne", "Loreborne",  "Orderborne", "Ridgeborne", "Seaborne", 
+                    "Slyborne", "Underborne", "Wanderborne", "Wildborne")
+list_class <- c("Bard", "Druid", "Guardian", "Ranger", "Rogue", "Seraph", "Sorcerer", "Warrior", "Wizard")
+
+# Define UI for application ----
+ui <- fluidPage(theme=shinytheme("journal"),
+                tags$head(
+                    tags$style(HTML("hr {border-top: 3px solid #000000;}"))
+                ),
+                
+                # Application title
+                titlePanel("Daggerheart - NPC Generator "),
+                
+                # Topbar with selections 
+                fluidRow(shinyjs::useShinyjs(),
+                         id = "side-panel",
+                         
+                         column(2,radioButtons("choice","", c("Randomized","Predetermined")),
+                                sliderInput("num_npc","Number of NPC",value=1,min = 1, max = 10), offset=1),
+                         
+                         column(2,conditionalPanel(condition = "input.choice == 'Predetermined'",
+                                                   selectInput("choice_gender", "Gender", c("Random","He/Him","She/Her","They/Them")),
+                                                   
+                                                   selectInput("choice_class", "Inspiration Class", c("Random",
+                                                                                                      "Bard",
+                                                                                                      "Druid",
+                                                                                                      "Guardian", 
+                                                                                                      "Ranger", 
+                                                                                                      "Rogue", 
+                                                                                                      "Seraph",
+                                                                                                      "Sorcerer", 
+                                                                                                      "Warrior",
+                                                                                                      "Wizard")))),
+                         
+                         column(2,conditionalPanel(condition = "input.choice == 'Predetermined'",
+                                                   selectInput("choice_ancestry", "Ancestry", c("Random",
+                                                                                                "Clank",
+                                                                                                "Drakona",
+                                                                                                "Dwarf", 
+                                                                                                "Elf", 
+                                                                                                "Faerie", 
+                                                                                                "Faun", 
+                                                                                                "Firbolg",
+                                                                                                "Fungril",
+                                                                                                "Galapa", 
+                                                                                                "Giant", 
+                                                                                                "Goblin", 
+                                                                                                "Halfling", 
+                                                                                                "Human", 
+                                                                                                "Infernis", 
+                                                                                                "Katari", 
+                                                                                                "Orc",
+                                                                                                "Ribbet",
+                                                                                                "Simiah")),
+                                                   
+                                                   selectInput("choice_community", "Community", c("Random",
+                                                                                                  "Highborne",
+                                                                                                  "Loreborne",
+                                                                                                  "Orderborne",
+                                                                                                  "Ridgeborne",
+                                                                                                  "Seaborne",
+                                                                                                  "Slyborne",
+                                                                                                  "Underborne",
+                                                                                                  "Wanderborne",
+                                                                                                  "Wildborne"))))),                       
+                
+                
+                fluidRow(column(3,actionButton("generate","Generate"),
+                                offset= 4),
+                         column(3,actionButton("reset_input", "Reset"))),
+                
+                
+                mainPanel(fluidRow(htmlOutput("NPC")),
+                          offset=5)
+)
+# Define server logic ----
+server <- function(input, output) {
+    
+    NPC <- eventReactive(input$generate,{
+        
+        res <- " "
+        rep_num <- input$num_npc
+        
+        for ( i in 1:rep_num){
+            
+            set.seed(NULL)
+            
+            firstname <- list_npc %>% 
+                select(First.Name) %>% 
+                sample_n(1,replace = TRUE) %>% 
+                pull(First.Name)
+            
+            surname <- list_npc %>% 
+                select(Surname) %>% 
+                sample_n(1,replace = TRUE) %>% 
+                pull(Surname)
+            
+            description <- list_npc %>% 
+                select(Description) %>% 
+                sample_n(1,replace = TRUE) %>% 
+                pull(Description)
+            
+            motivation <- list_npc %>% 
+                select(Motivation) %>% 
+                sample_n(1,replace = TRUE) %>% 
+                pull(Motivation)
+            
+            flaw <- list_npc %>% 
+                select(Flaws) %>% 
+                sample_n(1,replace = TRUE) %>% 
+                pull(Flaws)
+            
+            if(input$choice == "Randomized"){
+                gender <- list_gender[sample(1:length(list_gender),1)]
+                ancestry <- list_ancestry[sample(1:length(list_ancestry),1)]
+                community <- list_community[sample(1:length(list_community),1)]
+                class <- list_class[sample(1:length(list_class),1)]
+            }
+            else{
+                gender <- case_when(input$choice_gender == "Random" ~ list_gender[sample(1:length(list_gender),1)],
+                                    input$choice_gender != "Random" ~ input$choice_gender)
+                ancestry <- case_when(input$choice_ancestry == "Random" ~ list_ancestry[sample(1:length(list_ancestry),1)],
+                                      input$choice_ancestry != "Random" ~ input$choice_ancestry)
+                community <- case_when(input$choice_community == "Random" ~ list_community[sample(1:length(list_community),1)],
+                                       input$choice_community != "Random" ~ input$choice_community)
+                class <-  case_when(input$choice_class == "Random" ~ list_class[sample(1:length(list_class),1)],
+                                    input$choice_class != "Random" ~ input$choice_class)
+            }
+            
+            res <- paste(res,"<h2>",firstname," ", surname, "</h2>", 
+                         "<h4>",community, ancestry,"(",gender,")","</h4>",
+                         "<p><b>Class inspiration:</b>",class, 
+                         "<p><b>Description :</b>", description,
+                         "<p><b>Motivation :</b>", motivation,
+                         "<p><b>Flaw :</b>", flaw)
+        }
+        res
+        
+    })
+    
+    
+    output$NPC <- renderText({
+        NPC()
+    })
+    
+    observeEvent(input$reset_input, {
+        shinyjs::reset("side-panel")
+        shinyjs::hide("NPC")
+        shinyjs::hide("NPC_random")
+    })
+    observeEvent(input$generate, {
+        shinyjs::show("NPC")
+        shinyjs::hide("NPC_random")
+    })
+    
+}
+
+# Run the application ----
+shinyApp(ui = ui, server = server)
